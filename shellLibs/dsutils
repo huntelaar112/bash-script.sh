@@ -201,3 +201,7 @@ docker-getBindInfo() {
 	#docker inspect --format="{{range .Mounts}}{{.}}; {{end}}" "${conname}"
 	docker inspect --format="{{range .Mounts}} Type:{{.Type}} RW:{{.RW}} {{.Source}}:{{.Destination}}; {{end}}" "${conname}"
 }
+
+docker-execBash() {
+	docker exec -it "${1}" bash
+}

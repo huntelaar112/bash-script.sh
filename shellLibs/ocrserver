@@ -15,7 +15,12 @@ publicIp=$(curl ifconfig.me 2>/dev/null)
 	#export nginxgenConName="nginxgenocrprodvn"
 }
 
-[[ ${publicIp} == "103.245.249.115" ]] && { #stgvn
+[[ ${publicIp} == "61.28.238.231" ]] && { #prod-2gpu
+	export idEndpoint="https://gapi.smartocr.vn/idfulltoyota/v1/recognition"
+	#export nginxgenConName="nginxgenocrprodvn"
+}
+
+[[ ${publicIp} == "116.118.95.70" ]] && { #stgvn
 	export idEndpoint="https://stgapi.smartocr.vn/idfull/v1/recognition"
 	export faceEndpoint="https://stgapi.smartocr.vn/face/v1/recognition"
 	#export nginxgenConName="nginxgenocrstgvn"

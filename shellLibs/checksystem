@@ -84,3 +84,7 @@ checkIfCommandExist() {
 check-nvida-version() {
 	cat /proc/driver/nvidia/version
 }
+
+go-track-package() {
+	go mod graph
+}
