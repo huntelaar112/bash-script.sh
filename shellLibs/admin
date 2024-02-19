@@ -1,0 +1,227 @@
+#!/bin/bash
+
+source $(which logshell)
+source $(which checksystem)
+
+admin_disable-apt-autoupdate() {
+	local content="
+APT::Periodic::Update-Package-Lists \"0\";
+APT::Periodic::Unattended-Upgrade \"0\";"
+
+	echo "${content}" >/etc/apt/apt.conf.d/20auto-upgrades
+	[[ $? == 0 ]] && {
+		systemctl restart apt-daily.timer
+		return 0
+	} || return 1
+	echo "apt auto update is disabled"
+}
+
+admin_date-set-GMT0() {
+	#date -s "$(wget -qSO- --max-redirect=0 google.com 2>&1 | grep Date: | cut -d' ' -f5-8)"
+	cp /etc/localtime /etc/localtime_backup && ln -sf "/usr/share/zoneinfo/Etc/GMT+0" /etc/localtime
+}
+
+admin_date-set-GMT7() {
+	cp /etc/localtime /etc/localtime_backup && ln -sf /usr/share/zoneinfo/Asia/Ho_Chi_Minh /etc/localtime
+}
+
+admin_user-add-to-sudo() {
+	username=${1}
+	[[ $1 == "-h" || -z $1 ]] && {
+		echo "Usage: sudo $FUNCNAME <user_name>
+           Note: This script need sudo permission to execute."
+		return 0
+	}
+
+	apt install sudo &>/dev/null
+	usermod -aG sudo "${username}"
+	[[ $? != 0 ]] && {
+		echo "This script need sudo permission to execute."
+	}
+	echo ""${username}" ALL=(ALL:ALL) NOPASSWD:ALL" >>/etc/sudoers
+	[[ $? == 0 ]] && {
+		echo "Done add user to sudo group and enable sudo without password."
+	}
+}
+
+admin_user-add-to-group() {
+	username=${1}
+	groupname=${1}
+	[[ $1 == "-h" || -z $1 ]] && {
+		echo "Usage: sudo ${FUNCNAME} user_name groups_name
+           Note: This script need sudo permission to execute."
+		return 0
+	}
+
+	sudo usermod -aG docker "${username}"
+	[[ $? == 0 ]] && {
+		echo "Done add ${username} to ${groupname}"
+	}
+}
+
+admin_user-createnew() {
+	username=${1}
+	adduser ${username}
+}
+
+admin_user-createsilent() {
+	username=${1}
+	password=${2}
+	pass=$(openssl passwd -1 -salt xyz "${password}")
+	useradd -m -p "${pass}" "${username}"
+}
+
+admin_user-changepass() {
+	username=${1}
+	passwd ${username}
+}
+
+admin_user-remove() {
+	username=${1}
+	deluser ${username}
+}
+
+admin_user-remove-with-home() {
+	username=${1}
+	deluser --remove-home ${username}
+}
+
+admin_user-list-sudo-user() {
+	getent group sudo
+}
+
+admin_swap-enable() {
+	pathSwap="${1}"
+	sizeSwap=${2}
+
+	[[ $1 == "-h" || -z $1 ]] && {
+		echo "Usage: sudo $FUNCNAME <absolute/path/to/swapfile> <size-of-swapfile>
+           size-of-swapfile: (GB) or MB
+           Note: This script need sudo permission to execute."
+		return 0
+	}
+
+	echo "List swapfile on this system:"
+	swapon --show
+	fallocate -l "${sizeSwap}" "${pathSwap}"
+	chmod 600 "${pathSwap}"
+	mkswap "${pathSwap}"
+	swapon "${pathSwap}"
+	echo ""${pathSwap}" none swap sw 0 0" | sudo tee -a /etc/fstab
+
+	echo "Done create swapfile ${sizeSwap} at ${pathSwap}"
+}
+
+admin_swap-disable() {
+	echo "Current swap:"
+	swapon --show
+	log-step "Disabling all swap file."
+	swapoff -a
+
+	echo "Run: nano /etc/fstab to disable permanent swapon."
+	nano /etc/fstab
+	log-step "Done disable all swapfile. Let's delete swapfiles by yourself"
+	swapon --show
+}
+
+admin_coredump-enable() {
+	[[ ${1} = "-h" || -z ${1} ]] && {
+		echo "Usage:
+sudo $FUNCNAME (absolute/path/to/place/core-dump-file)
+Default path core-dump files: /tmp/cores (not include / at tail)
+
+Note: This script need sudo permission to execute."
+		return 0
+	}
+	pathCore="${1}"
+	[[ -z ${pathCore} ]] && {
+		pathCore="/tmp/cores"
+	}
+	mkdir -p ${pathCore}
+	chmod a+rwx ${pathCore}
+	#change file log coredump
+	echo "${pathCore}/core.%e.%p.%h.%t" >/proc/sys/kernel/core_pattern
+
+	ulimit -S -c unlimited >/dev/null 2>&1
+
+	echo "Done enable core-dump, core-dump file saved at: ${pathCore}"
+}
+
+admin_bandwidth-limit() {
+	[[ ${1} = "-h" || -z ${1} ]] && {
+		echo "Usage:
+$FUNCNAME  <download_limit> <upload_limit>
+  example: bandwidth-limit 256 128 --> kbps
+
+bandwidth-limit clear --> clear
+
+Note: This script need sudo permission to execute."
+		return 0
+	}
+	log-info "Install wondershaper"
+	apt install wondershaper
+	upload_limit=${2}
+	download_limit=${1}
+
+	[[ ${download_limit} == "clear" ]] && {
+		sudo wondershaper clear "${upload_limit}"
+	} || {
+		sudo wondershaper eth1 ${download_limit} ${upload_limit}
+	}
+}
+
+admin_sysdListServices() {
+	systemctl list-units --type=service
+}
+
+admin_sysdViewServiceLogs() {
+	[[ ${1} = "-h" || -z ${1} ]] && {
+		echo "Usage:
+sudo $FUNCNAME <service_name> [all]"
+		return 0
+	}
+
+	serviceName=${1}
+	[[ ${2} == "all" ]] && {
+		journalctl -f -u "${serviceName}"
+	} || {
+		journalctl -f -u "${serviceName}" -b
+	}
+}
+
+admin_change_hostname() {
+	[[ ${1} = "-h" || -z ${1} ]] && {
+		echo "Usage:
+sudo $FUNCNAME <new_hostname>"
+		return 0
+	}
+	hostnamectl set-hostname "${1}"
+	echo "Go to /etc/hosts to chagne hostname and run systemctl restart systemd-hostnamed"
+}
+
+admin_add_git_token() {
+	[[ ${1} = "-h" || -z ${1} ]] && {
+		echo "Usage:
+sudo $FUNCNAME <token_path>"
+		return 0
+	}
+
+addgitssh='
+eval $(ssh-agent -s)
+ssh-add ~/.ssh/githubssh 
+'
+
+	token_path="$1"
+	[[ $(checkIfFileHaveText "ssh-add ${1}" '~/.bashrc') == "yes" ]] && {
+		echo "This token already added."
+	} || {
+		echo "${addgitssh}" >> ~/.bashrc
+	}
+}
+
+admin_GetUUID() {
+	sudo cat /sys/class/dmi/id/product_uuid
+	[[ $? != 0 ]] && {
+		return 1
+	}
+}

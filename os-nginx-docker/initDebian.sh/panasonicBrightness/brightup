@@ -1,0 +1,12 @@
+#!/bin/bash
+
+currentbright=$(cat /sys/class/backlight/intel_backlight/brightness)
+maxbright=850
+
+[[ $currentbright -lt $maxbright ]] && {
+	((currentbright+=100))
+	#echo "Current brightness: $currentbright"
+	echo ${currentbright} > /sys/class/backlight/intel_backlight/brightness
+} || echo "Max brightness reached"
+
+

@@ -1,0 +1,11 @@
+#!/bin/bash
+
+currentbridge=$(cat /sys/class/backlight/intel_backlight/brightness)
+minbright=100
+
+[[ $currentbridge -gt $minbright ]] && {
+	((currentbridge-=100))
+	echo $currentbridge > /sys/class/backlight/intel_backlight/brightness
+} || echo "Min brightness reached"
+
+

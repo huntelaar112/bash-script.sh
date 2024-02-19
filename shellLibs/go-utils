@@ -1,0 +1,23 @@
+#!/bin/bash
+
+go-track-package() {
+	go mod graph
+}
+
+go-list-package-used() {
+	go list -json -m all
+}
+
+go-build() {
+	go build main.go
+}
+
+go-run() {
+	go run main.go
+}
+
+#cleanup project dependencies
+go-mod-cleanup-proj() {
+	go clean -modcache
+	go mod tidy
+}

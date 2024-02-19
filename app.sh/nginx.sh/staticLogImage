@@ -1,0 +1,83 @@
+#pass real ip of client by proxy_header                                                                                                                                                                                                                                       
+real_ip_header proxy_protocol;                                                                                                                                                                                                                                                
+   location /logs {                                                                                                                                                                                                                                                           
+        #proxy_set_header Host $proxy_x_forwarded_host;                                                                                                                                                                                                                       
+        #include proxy_params;                                                                                                                                                                                                                                                
+        try_files $uri $uri/ $uri.html =404;                                                                                                                                                                                                                                  
+        alias /data;                                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                              
+        autoindex on;                                                                                                                                                                                                                                                         
+        #autoindex_exact_size on;                                                                                                                                                                                                                                             
+        autoindex_localtime on;                                                                                                                                                                                                                                               
+        autoindex_format html;                                                                                                                                                                                                                                                
+                                                                                                                                                                                                                                                                              
+        sendfile on;                                                                                                                                                                                                                                                          
+        #sendfile_max_chunk 1m;                                                                                                                                                                                                                                               
+                                                                                                                                                                                                                                                                              
+        gzip_static on;                                                                                                                                                                                                                                                       
+        gzip_types text/plain application/xml;                                                                                                                                                                                                                                
+        #zip_file_extension zip;                                                                                                                                                                                                                                              
+                                                                                                                                                                                                                                                                              
+        #more_set_headers 'Cache-Control: "max-age=0, no-cache, no-store, must-revalidate"';                                                                                                                                                                                  
+        #more_set_headers 'Pragma: "no-cache"';                                                                                                                                                                                                                               
+
+        satisfy all;
+        #allow 127.0.0.0/8;
+        #allow 10.0.0.0/8;
+        #allow 192.168.0.0/16;
+        allow 172.17.0.0/16;
+        #hcm
+        allow 222.253.41.225;
+        allow 14.241.224.70;
+        allow 171.244.188.245;
+        allow 118.67.72.16;
+        allow 118.69.77.23;
+        #hn
+        allow 101.99.15.6;
+        allow 101.99.14.221;
+        allow 118.70.67.69;
+        allow 123.25.21.145;
+        allow 118.70.170.147;
+        deny all;
+
+        auth_basic_user_file /etc/nginx/conf-http.d/.authen;
+        auth_basic "Restricted Content";
+    }
+
+    location /saved_images {
+        try_files $uri $uri/ $uri.html =404;
+        alias /mnt/containerdata/saved_images;
+        autoindex on;
+
+        sendfile on;
+        #sendfile_max_chunk 1m;
+
+        gzip_static on;
+        gzip_types text/plain application/xml;
+        #zip_file_extension zip;
+
+        #more_set_headers 'Cache-Control: "max-age=0, no-cache, no-store, must-revalidate"';
+        #more_set_headers 'Pragma: "no-cache"';
+
+        satisfy all;
+        allow 127.0.0.0/8;
+        allow 10.0.0.0/8;
+        allow 192.168.0.0/16;
+        allow 172.17.0.0/16;
+        #hcm
+        allow 222.253.41.225;
+        allow 14.241.224.70;
+        allow 171.244.188.245;
+        allow 118.67.72.16;
+        allow 118.69.77.23;
+        #hn
+        allow 101.99.15.6;
+        allow 101.99.14.221;
+        allow 118.70.67.69;
+        allow 123.25.21.145;
+        deny all;
+
+        auth_basic_user_file /etc/nginx/conf-http.d/.authen;
+        auth_basic "Restricted Content";
+    }
+

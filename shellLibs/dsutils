@@ -1,0 +1,203 @@
+#!/bin/bash
+
+#check if container is running or not
+#arg: path to container name
+function docker-container-is-running() {
+	[[ $1 ]] || {
+		echo "Missing container name to check parameter"
+		return 1
+	}
+	#grep -qie: quiet (don't redirect to stdout/err), ignore uppercase(R)
+	#docker container inspect return Json format --> grep --> if have word running --> return 0 (true)
+	docker container inspect -f '{{.State}}' "${1}" 2>/dev/null | grep -qie 'Running' && return 0 || return 1
+}
+
+#check if docker image is exist or not
+#arg: path to docker image
+function docker-image-is-exist() {
+	[[ $1 ]] || {
+		echo "Missing container name to check parameter"
+		return 1
+	}
+	docker image inspect -f '{{.RepoTags}} {{.Created}}' "${1}" &>/dev/null
+}
+
+#check if docker container is exist or not
+#arg: path to docker container
+function docker-container-is-exist() {
+	[[ $1 ]] || {
+		echo "Missing container name to check parameter"
+		return 1
+	}
+	docker container inspect -f '{{.State}}' "$1" &>/dev/null
+}
+
+#create docker network
+#args: [ip] [subnet]
+#return 0 if success, 1 if false
+function docker-network-create() {
+	local OCRNETWORK=$1
+	local OCRNETWORK_SUBNET=$2
+	docker network create -o "com.docker.network.bridge.name"="${OCRNETWORK}" --subnet="${OCRNETWORK_SUBNET}" ${OCRNETWORK} && return 0 || return 1
+}
+# docker network create -o "com.docker.network.bridge.name"="ocrnetwork" --subnet="172.172.0.0/24" ocrnetwork
+
+#args: [subnet]
+#return subnet of ocrnetwork
+function docker-network-get-cidr() {
+	[[ $1 ]] || return 1
+	echo -n "$(docker inspect -f '{{range $k, $v := .IPAM.Config}}{{printf $v.Subnet}}{{end}}' "${1}")"
+}
+
+#check if container have network configuration
+#arg:
+function docker-network-is-exist() {
+	[[ $1 ]] || return 1
+	# docker network inspect -f: return info about one or more network (json), -f: using Go template
+	docker network inspect -f '{{.Name}}' "${1}" &>/dev/null && return 0 || return 1
+}
+
+docker-find-container-from-hostpid() {
+	{ [[ $1 ]] && [[ -d /proc/$1 ]]; } || {
+		echo "Missing host pid - write by thanhson.rf@gmail.com"
+		return 1
+	}
+	hostpid=${1}
+	dnamespace=$(grep -e docker /proc/$hostpid/cgroup | head -n 1 | grep -ioEe '[^/]+$')
+
+	[[ $dnamespace ]] || {
+		echo "Missing host pid - write by thanhson.rf@gmail.com"
+		return 1
+	}
+
+	echo -e "Waitting ....."
+
+	for container in $(docker ps -q --format "{{.Names}}"); do
+		cnamespace="$(docker exec "$container" bash -c 'cat  /proc/1/cgroup')"
+		#  echo -e "\n\n___________dnamespace --> $dnamespace================\n\n"
+		#  dnamespace=$(echo "${dnamespace}" | head -n 1 | grep -ioEe '[^/]+$')
+
+		#  echo "Checking on ${container}:  $cnamespace - $dnamespace"
+		echo "$cnamespace" | grep "$dnamespace" &>/dev/null && {
+			echo "PID: $hostpid found in $container"
+			exit 0
+		}
+	done
+	echo "Cannot found"
+}
+
+# use to kill when container is blocked.
+docker-find-hostpid-from-containerName() {
+	containername=${1}
+	ps auxw | grep $(docker container ls | grep ${containername} | awk '{print $1}') | awk '{print $2}'
+	#kill -9 12345678
+}
+
+docker-kill-container-by-hostpid() {
+	containername=${1}
+	id=$(ps auxw | grep $(docker container ls | grep ${containername} | awk '{print $1}') | awk '{print $2}')
+	kill -9 ${id}
+}
+
+docker-change-rootdir() {
+	[[ $1 == "-h" ]] && {
+		echo "Usage: sudo $FUNCNAME <new-docker-root-dir>"
+		return 0
+	}
+
+	newpath=${1}
+	oldpath=$(docker info -f '{{ .DockerRootDir}}')
+
+	log-info "Stoping docker service."
+	systemctl stop docker docker.socket containerd
+	#systemctl stop docker.socket
+	#systemctl stop containerd
+
+	log-info "Copy old root $oldpath to $newpath ..."
+	# if folder exist, do nothing
+	[[ -d ${newpath} ]] && {
+		log-warning "${newpath} is already existed, use exist, not copy data from old root"
+	} || {
+		mkdir -p "${newpath}"
+		cp -rf "${oldpath}" "${newpath}"
+	}
+
+	touch /etc/docker/daemon.json
+
+	log-info "Create new config at /etc/docker/daemon.json"
+	[[ $(checkIfCommandExist nvidia-docker) == "yes" ]] && {
+		config="
+		{
+            \"runtimes\": {
+                \"nvidia\": {
+                    \"path\": \"nvidia-container-runtime\",
+                    \"runtimeArgs\": []
+                }
+            },
+           \"data-root\": \"${newpath}\"
+        }"
+	} || {
+		config="
+        {
+          \"data-root\": \"${newpath}\"
+        }"
+	}
+
+	echo "${config}" >/etc/docker/daemon.json
+	systemctl restart docker
+	log-info "Apply new config, restarting docker service, new root dir is: "
+	docker info -f '{{ .DockerRootDir}}'
+}
+
+docker-updateRestartRules() {
+	[[ -n $(docker ps -q) ]] && {
+		docker update --restart=always $(docker ps -q)
+	}
+
+	[[ -n $(docker ps --filter status=exited -q) ]] && {
+		docker update --restart=no $(docker ps --filter status=exited -q)
+	}
+	echo "Have a good day <3"
+}
+
+docker-findOverlay2() {
+	docker inspect $(docker ps -qa) | jq -r 'map([.Name, .GraphDriver.Data.MergedDir]) | .[] | "\(.[0])\t\(.[1])"'
+}
+
+docker-updateConRes() {
+	[[ $1 == "-h" ]] && {
+		echo "Usage: sudo $FUNCNAME <conname> <cpus> <ram> <ram+swap>
+		example: $FUNCNAME nginx 4 500M 1GB"
+		return 0
+	}
+
+	conname=${1}
+	cpus=${2}
+	ram=${3}
+	ramAndSwap=${4}
+
+	docker update --cpus "${cpus}" -m "${ram}" --memory-swap "${ramAndSwap}" "${conname}"
+	[[ $? == 0 ]] && {
+		echo "Success update container metrics resource. Have a good day!"
+	}
+}
+
+docker-getIPInfo() {
+	[[ $1 == "-h" ]] && {
+		echo "Usage: ${FUNCNAME} <container_name>"
+		return 0
+	}
+	conname=${1}
+	docker inspect --format="{{range .NetworkSettings.Networks}}{{.IPAddress}}; {{end}}" "${conname}"
+}
+
+docker-getBindInfo() {
+	[[ $1 == "-h" ]] && {
+		echo "Usage: ${FUNCNAME} <container_name>"
+		return 0
+	}
+	conname=${1}
+	echo "Type, Source, Des, Mode, RW, Propagation"
+	#docker inspect --format="{{range .Mounts}}{{.}}; {{end}}" "${conname}"
+	docker inspect --format="{{range .Mounts}} Type:{{.Type}} RW:{{.RW}} {{.Source}}:{{.Destination}}; {{end}}" "${conname}"
+}

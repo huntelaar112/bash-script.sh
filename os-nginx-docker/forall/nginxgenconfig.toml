@@ -1,0 +1,37 @@
+[[Containers]]
+Name = "id0"
+State = {Running = true}
+[Containers.env]
+VHOST = 'id.smartocr.vn'
+DISABLEGNVHOST = 'true'
+UNAME = 'idsmartocrvn'
+
+[[Containers]]
+Name = "id1"
+State = {Running = true}
+[Containers.env]
+VHOST = 'id.smartocr.vn'
+DISABLEGNVHOST = 'true'
+UNAME = 'idsmartocrvn'
+
+[[Containers]]
+Name = "hello"
+State = {Running = true}
+[Containers.env]
+VHOST = 'hello.smartocr.vn'
+DISABLEGNVHOST = 'true'
+UNAME = 'hello'
+
+[[Containers]]
+Name = "all"
+State = {Running = true}
+[Containers.env]
+VPROTO = "http"
+HTTPS_METHOD = 'noredirect'
+VHOST = '_' # name of domain you use, or IP if use local
+CERNAME = 'certificate-name' # name of certificate (example: certificate-name.key, certificate-name.crt(.pem))
+DISABLEGENUPSTREAM = 'true'
+VPORT = '80'
+#VHOSTOPT = 'include statuslocal.conf;'
+VPATHDESTS = """/idfull/,UN:idsmartocrvn
+|/hello/,UN:hello"""

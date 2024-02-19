@@ -1,0 +1,207 @@
+#!/bin/bash
+
+source $(which checksystem)
+source $(which logshell)
+
+# rename
+nwInterfaceRename() {
+  [[ $1 == "-h" || -z $1 || -z $2 ]] && {
+    echo "Usage: sudo $FUNCNAME <interface-Name> <new-name>"
+    return 0
+  }
+  interface="${1}"
+  newiname="${2}"
+  sudo ip link set dev "${interface}" down
+  sudo ip link set dev "${interface}" name "${newiname}"
+  sudo ip link set dev "${interface}" up
+}
+
+# connect dhcp, with wpa_supplicant
+nwWifiConnect2AP_networkingService() {
+  [[ $1 == "-h" || -z $1 || -z $2 || -z $3 ]] && {
+    echo "Usage: sudo $FUNCNAME <ssid> <pass> <device>"
+    return 0
+  }
+  ssid="${1}"
+  pass="${2}"
+  device="${3}"
+
+  [[ $(checkIfFileHaveText "${device}" /etc/network/interfaces) == "no" ]] && {
+    log-info "write config to /etc/network/interfaces"
+    echo -e "
+allow-hotplug "${device}"
+iface "${device}" inet dhcp
+wpa-conf /etc/wpa_supplicant/"${device}".conf
+" >>/etc/network/interfaces
+  } || log-error "Error when write config to /etc/network/interfaces"
+
+  [[ ! -f /etc/wpa_supplicant/"${device}".conf ]] && {
+    log-info "write config to /etc/wpa_supplicant/"${device}".conf"
+    echo -e "
+update_config=1
+country=VN
+" >/etc/wpa_supplicant/"${device}".conf
+
+    wpa_passphrase "${ssid}" "${pass}" >>/etc/wpa_supplicant/"${device}".conf
+  }
+
+  log-info "Restart networking service..."
+  systemctl restart networking
+  # bgscan=\"simple:60:-70:7200\"
+  # ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev
+}
+
+nwWifiConnect2AP_withoutwpaconf() {
+  [[ $1 == "-h" || -z $1 || -z $2 || -z $3 ]] && {
+    echo "Usage: sudo $FUNCNAME <ssid> <pass> <device>
+Only write config to /etc/network/interfaces"
+    return 0
+  }
+  ssid="${1}"
+  pass="${2}"
+  device="${3}"
+
+  [[ $(checkIfFileHaveText "${device}" /etc/network/interfaces) == "no" ]] && {
+    log-info "write config to /etc/network/interfaces"
+
+    echo -e "
+allow-hotplug "${device}"
+iface "${device}" inet dhcp
+        wpa-ssid \"${ssid}\"
+        wpa-psk \"${pass}\"
+" >>/etc/network/interfaces
+  } || log-error "Error when write config to /etc/network/interfaces"
+
+  log-info "Restart networking service..."
+  systemctl restart networking
+}
+
+# start isc-dhcp-server on specific interface
+# need set staticip for this interface before
+nwEnableDhcp_v4Service() {
+  ### /etc/default/isc-dhcp-server
+
+  # Defaults for isc-dhcp-server (sourced by /etc/init.d/isc-dhcp-server)
+
+  # Path to dhcpd's config file (default: /etc/dhcp/dhcpd.conf).
+  #DHCPDv4_CONF=/etc/dhcp/dhcpd.conf
+  #DHCPDv6_CONF=/etc/dhcp/dhcpd6.conf
+
+  # Path to dhcpd's PID file (default: /var/run/dhcpd.pid).
+  #DHCPDv4_PID=/var/run/dhcpd.pid
+  #DHCPDv6_PID=/var/run/dhcpd6.pid
+
+  # Additional options to start dhcpd with.
+  #       Don't use options -cf or -pf here; use DHCPD_CONF/ DHCPD_PID instead
+  #OPTIONS=""
+
+  # On what interfaces should the DHCP server (dhcpd) serve DHCP requests?
+  #       Separate multiple interfaces with spaces, e.g. "eth0 eth1".
+  [[ $1 == "-h" || -z $1 ]] && {
+    echo "Usage: sudo $FUNCNAME <net_interface>
+Note: This function setup dhcp server on specific network interface"
+    return 0
+  }
+  [[ $(checkIfCommandExist "dhcpd") == "no" ]] && {
+    apt install isc-dhcp-server
+  }
+
+  log-info "Write config to /etc/dhcp/dhcpd.conf && /etc/default/isc-dhcp-server"
+  interface="${1}"
+  echo -e "option domain-name-servers 1.1.1.1;
+default-lease-time 600;
+ddns-update-style none; ddns-updates off;
+subnet 192.168.0.0 netmask 255.255.255.0 {
+       max-lease-time 7200;
+       range 192.168.0.200 192.168.0.229;
+       option subnet-mask 255.255.255.0;
+       option broadcast-address 192.168.0.255;
+       option routers 192.168.0.1;
+       }
+" >/etc/dhcp/dhcpd.conf
+
+  echo -e "INTERFACESv4=\"${interface}\"
+INTERFACESv6=\"\"" >/etc/default/isc-dhcp-server
+
+  systemctl restart isc-dhcp-server
+  [[ $? != 0 ]] && log-error "Error when starting DHCP server" || log-step "Start DHCP server successfully. Gateway: 192.168.0.1, IP range:192.168.0.200 192.168.0.229;"
+}
+
+nmcliWifiCardOff() {
+  nmcli radio wifi off
+}
+
+nmcliWifiCardOn() {
+  nmcli radio wifi on
+}
+
+nmcliWifiScan() {
+  nmcli dev wifi rescan && nmcli dev wifi list
+}
+
+nmcliWifiConnect2AP() {
+  [[ $1 == "-h" || -z $1 || -z $2 || -z $3 ]] && {
+    echo "Usage: sudo $FUNCNAME <ssid> <pass> <interface>
+Only write config to /etc/network/interfaces"
+    return 0
+  }
+  ssid="${1}"
+  pass="${2}"
+  interface="${3}"
+
+  nmcli dev wifi con "${ssid}" password "${pass}" ifname "${interface}"
+  [[ $? == 0 ]] && log-step "Success connect to "${ssid}" using "${interface}""
+}
+
+nmcliDisableCon() {
+  con="${1}"
+  nmcli connection down "${con}"
+}
+
+nmcliEnableCon() {
+  con="${1}"
+  nmcli connection up "${con}"
+}
+
+nmcliShowAllCons() {
+  nmcli con show
+}
+
+nmcliShowConDetail() {
+  con="${1}"
+  nmcli con show "${con}"
+}
+
+nmcliShowDevsInfo() {
+  nmcli
+}
+
+# set static ip for specific interface
+nmcliSetStaticIP() {
+  [[ $1 == "-h" || -z $1 || -z $2 || -z $3 ]] && {
+    echo "Usage: sudo $FUNCNAME <interface> <gateway> <address>
+Set static IP for interface."
+    return 0
+  }
+  interface="${1}"
+  gateway="${2}"
+  address="${3}"
+
+  nmcli con mod "${interface}" ipv4.method auto
+  nmcli con mod "${interface}" ipv4.gateway "${gateway}"
+  nmcli con mod "${interface}" ipv4.address "${address}"
+  nmcli con down "${interface}"
+  nmcli con up "${interface}"
+}
+
+nmcliRestartIface() {
+  [[ $1 == "-h" || -z $1 || -z $2 || -z $3 ]] && {
+    echo "Usage: sudo $FUNCNAME <interface>
+Restart network interface."
+    return 0
+  }
+  interface="${1}"
+
+  sudo ip link set "${interface}" down
+  sudo ip link set "${interface}" up
+}

@@ -1,0 +1,69 @@
+#!/bin/bash
+
+set -e
+#set +e # continue execute script in spite of command fail
+#set -u
+done=no
+exitval=0
+namescrpit=${0:2}
+
+function help() {
+	echo "NAME:
+  ${namescrpit}
+SYNOPSIS
+  ${namescrpit} [option 1] [option 2] args
+DESCRIPTION:
+  More description about this script
+OPTIONS:
+  -h, --help: display this help and exit"
+
+	exit ${exitval}
+}
+
+SHORT=z,h
+LONG=help,zip,option1:,option2:
+#add ":" if your option have arguments.
+OPTS=$(getopt -a -n "$0" --options $SHORT --longoptions $LONG -- "$@")
+eval set -- "$OPTS"
+
+VALID_ARGUMENTS=$#
+if [ "$VALID_ARGUMENTS" -eq 1 ]; then
+	exitval=1
+	help
+fi
+source "$(which logshell)"
+## for log-info, log-error, log-warning, log-run, log-debug, log-step
+
+#parser argument have options (-, --)
+while true; do
+	case "$1" in
+	-z | --zip)
+		ZIP="true"
+		shift 1
+		;;
+	--option1)
+		OPT1="$2"
+		shift 2
+		;;
+	--option2)
+		OPT2="$2"
+		shift 2
+		;;
+	-h | --help)
+		help
+		;;
+	--)
+		shift
+		break
+		;;
+	--* | -*)
+		log-error "Unexpected option: $1"
+		help
+		;;
+	*) ;;
+	esac
+done
+
+### Do things with argument and OPTs after parser
+
+done=yes

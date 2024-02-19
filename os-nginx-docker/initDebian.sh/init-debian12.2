@@ -1,0 +1,94 @@
+#!/bin/bash
+
+set -e
+done=no
+EXITEVAL=""
+confpath="${1}"
+
+source $(which logshell)
+
+[[ -e "${confpath}" ]] || {
+  log-error "File configuration does not exist"
+  exit 1
+}
+
+[[ ${confpath} == "-h" ]] && {
+  help
+}
+
+confpath=$(realpath ${confpath})
+#load config file
+source "$confpath"
+confpathdirname="${confpath%/*}"
+#installFolder="${confpathdirname}"
+confpathdirname="${confpathdirname##*/}"
+
+#mk temp dir to download install files
+tempdir="$(mktemp -d)"
+log-info "Temporary folder: ${tempdir}"
+
+function cleanup() {
+  rm -rf "${tempdir}"
+  [[ $EXITEVAL ]] && eval "${EXITEVAL}"
+}
+trap cleanup EXIT
+cd "${tempdir}"
+
+###### stand at /tmp/${tempdir} folder
+#add user to sudo, dialout gorup
+usermod -aG sudo,dialout,docker "${MY_USERNAME}"
+
+#change source list
+[[ -e /etc/apt/sources.list ]] || {
+  log-error "sources.list file not exist"
+  exit 1
+} && {
+  [[ -e /etc/apt/sources.list.bak ]] || {
+    mv /etc/apt/sources.list /etc/apt/sources.list.bak
+  }
+  echo "${sourcelist_content}" >/etc/apt/sources.list
+  chmod 664 /etc/apt/sources.list
+}
+
+log-step "Run apt update && upgrade"
+apt update
+apt -y upgrade
+
+#INSTALL firmware realtek, amd
+apt -y install firmware-realtek
+#apt -y install firmware-amd-graphics
+apt-get install firmware-amd-graphics libgl1-mesa-dri libglx-mesa0 mesa-vulkan-drivers xserver-xorg-video-all libssl-dev
+#apt -y install xserver-xorg-video-radeon
+
+#install bluetooth demon and GUI(blueman)
+apt -y install blueman wget git zip flameshot geany telegram-desktop iotop \
+               openssh-server mingw-w64
+
+# for nc
+apt-get install -y netcat-openbsd
+
+#install chrome
+[ -e /etc/apt/sources.list.d/google-chrome.list ] && {
+  log-info "Google Chrome already install."
+} || {
+  log-step "Install Google Chrome..."
+  wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
+  echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >/etc/apt/sources.list.d/google-chrome.list
+  apt update
+  apt -y install google-chrome-stable
+}
+
+log-step "Disable auto update"
+disable-apt-autoupdate
+
+function help() {
+  echo "config.env:
+APPS_FOLDER=             # Default is the name of the configuration files folder
+USERNAME=                # username (not root)
+
+Use for debian-12.2
+This script need sudo permission to execute.
+sudo ./ini-debian.sh config.env
+"
+  exit 0
+}

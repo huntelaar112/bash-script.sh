@@ -1,0 +1,23 @@
+#!/bin/bash
+
+set -e
+#set +e # continue execute script in spite of command fail
+#set -u
+done=no
+exitval=0
+
+namescrpit=${0:2}
+
+function help() {
+	echo "Usage: ${namescrpit} [option1] [option2] arg1 arg2
+  Note: This script need sudo permission to execute."
+	exit ${exitval}
+}
+
+numberArgs=""
+[[ ${1} = "-h" || -z ${1} || "$#" -lt ${numberArgs} ]] && {
+	help
+}
+source $(which logshell)
+
+done=yes

@@ -1,0 +1,181 @@
+{
+  "zabbix_export": {
+    "version": "6.0",
+    "date": "2023-01-04T12:09:17Z",
+    "groups": [
+      {
+        "uuid": "7df96b18c230490a9a0a9e2307226338",
+        "name": "Templates"
+      }
+    ],
+    "templates": [
+      {
+        "uuid": "06e566afb85749c9b77cd166be7550ce",
+        "template": "Endpoint PROD",
+        "name": "Endpoint PROD",
+        "description": "## Overview Checking endpoint PROD\n\n",
+        "groups": [
+          {
+            "name": "Templates"
+          }
+        ],
+        "items": [
+          {
+            "uuid": "d14aba3c8eb949f59b6ad98fdae7574e",
+            "name": "Endpoint ID",
+            "key": "endpoint.id",
+            "delay": "5",
+            "value_type": "TEXT",
+            "units": "",
+            "tags": [
+              {
+                "tag": "Application",
+                "value": "Endpoint"
+              }
+            ],
+            "triggers": [
+              {
+                "uuid": "28d7b60f3626409eaecc9f26978090ac",
+                "expression": "last(/Endpoint PROD/endpoint.id)=\"down\"",
+                "name": "Endpoint ID PROD is DOWN",
+                "priority": "AVERAGE"
+              }
+            ]
+          },
+          {
+            "uuid": "9f85886fbd944d7f99458e34ce509f05",
+            "name": "Endpoint ID1",
+            "key": "endpoint.idone",
+            "delay": "5",
+            "value_type": "TEXT",
+            "units": "",
+            "tags": [
+              {
+                "tag": "Application",
+                "value": "Endpoint"
+              }
+            ],
+            "triggers": [
+              {
+                "uuid": "635d8d1534c44f15b3d29a5b8e006554",
+                "expression": "last(/Endpoint PROD/endpoint.idone)=\"down\"",
+                "name": "Endpoint ID1 PROD is DOWN",
+                "priority": "AVERAGE"
+              }
+            ]
+          },
+          {
+            "uuid": "9ec56e0b7b6f49319f64c51468abf857",
+            "name": "Endpoint FACE",
+            "key": "endpoint.face",
+            "delay": "5",
+            "value_type": "TEXT",
+            "units": "",
+            "tags": [
+              {
+                "tag": "Application",
+                "value": "Endpoint"
+              }
+            ],
+            "triggers": [
+              {
+                "uuid": "e13fbbc18dd642efa5616034d354e20d",
+                "expression": "last(/Endpoint PROD/endpoint.face)=\"down\"",
+                "name": "Endpoint FACE PROD is DOWN",
+                "priority": "AVERAGE"
+              }
+            ]
+          },
+          {
+            "uuid": "14940b73dc9c4f6d86f2857369bcb990",
+            "name": "Endpoint VNPFF",
+            "key": "endpoint.vnpff",
+            "delay": "5",
+            "value_type": "TEXT",
+            "units": "",
+            "tags": [
+              {
+                "tag": "Application",
+                "value": "Endpoint"
+              }
+            ],
+            "triggers": [
+              {
+                "uuid": "5ab789093f4c41ddbbefae9b3c2dbea4",
+                "expression": "last(/Endpoint PROD/endpoint.vnpff)=\"down\"",
+                "name": "Endpoint VNPFF PROD is DOWN",
+                "priority": "AVERAGE"
+              }
+            ]
+          },
+          {
+            "uuid": "5234d7ebbbc641e8972aa79ffd22b16a",
+            "name": "Endpoint VNHFF",
+            "key": "endpoint.vnhff",
+            "delay": "5",
+            "value_type": "TEXT",
+            "units": "",
+            "tags": [
+              {
+                "tag": "Application",
+                "value": "Endpoint"
+              }
+            ],
+            "triggers": [
+              {
+                "uuid": "61bc3111fbb04424aa3f8f01ae1a0cb8",
+                "expression": "last(/Endpoint PROD/endpoint.vnhff)=\"down\"",
+                "name": "Endpoint VNHFF PROD is DOWN",
+                "priority": "AVERAGE"
+              }
+            ]
+          },
+          {
+            "uuid": "a3e04a3d0da349c28fc2ad1717b2085c",
+            "name": "Endpoint CMQD",
+            "key": "endpoint.cmqd",
+            "delay": "5",
+            "value_type": "TEXT",
+            "units": "",
+            "tags": [
+              {
+                "tag": "Application",
+                "value": "Endpoint"
+              }
+            ],
+            "triggers": [
+              {
+                "uuid": "54a11f11e0064841a46e754a2ff11042",
+                "expression": "last(/Endpoint PROD/endpoint.cmqd)=\"down\"",
+                "name": "Endpoint CMQD PROD is DOWN",
+                "priority": "AVERAGE"
+              }
+            ]
+          },
+          {
+            "uuid": "0fc2c8b4cc13443ea0bff37fa443febb",
+            "name": "Endpoint GHVN",
+            "key": "endpoint.ghvn",
+            "delay": "5",
+            "value_type": "TEXT",
+            "units": "",
+            "tags": [
+              {
+                "tag": "Application",
+                "value": "Endpoint"
+              }
+            ],
+            "triggers": [
+              {
+                "uuid": "0f1843b9ba8e4d6fa34ce3e631eb377a",
+                "expression": "last(/Endpoint PROD/endpoint.ghvn)=\"down\"",
+                "name": "Endpoint GHVN PROD is DOWN",
+                "priority": "AVERAGE"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

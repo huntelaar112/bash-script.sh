@@ -1,0 +1,86 @@
+#!/bin/bash
+
+checkOsID() {
+	cat /etc/os-release | grep "^ID=" | cut -d "=" -f 2
+	[[ $? != 0 ]] && {
+		return 1
+	}
+}
+
+checkOsVersionID() {
+	cat /etc/os-release | grep "^VERSION_ID=" | cut -d "=" -f 2
+	[[ $? != 0 ]] && {
+		return 1
+	}
+}
+
+checkOsIDLike() {
+	cat /etc/os-release | grep "^ID_LIKE=" | cut -d "=" -f 2
+	[[ $? != 0 ]] && {
+		return 1
+	}
+}
+
+checkIPPub() {
+	curl ifconfig.me
+	[[ $? != 0 ]] && {
+		return 1
+	}
+}
+
+checkIfRootSession() {
+	username=$(echo $USER)
+	[[ "${username}" == "root" ]] && {
+		echo "yes"
+		return 0
+	} || echo "no"
+	return 1
+}
+
+checkIfFileHaveText() {
+	text="${1}"
+	filePath="${2}"
+	
+	[[ $1 == "-h" || -z $1 ]] && {
+		echo "Usage: sudo $FUNCNAME <text> <filePath>
+           Note: filePath oke, not \"filePath\"."
+		return 0
+	}
+
+	grep -irne "${text}" "${filePath}" &>/dev/null
+	[[ $? == 0 ]] && {
+		echo "yes"
+		return 0
+	} || {
+		echo "no"
+		return 1
+	}
+}
+
+checkIfUserExist() {
+	username=${1}
+	id ${username}
+	[[ $? == 0 ]] && {
+		echo "yes"
+		return 0
+	} || {
+		echo "no"
+		return 1
+	}
+}
+
+checkIfCommandExist() {
+	command=${1}
+	command -v ${command} >/dev/null
+	[[ $? == 0 ]] && {
+		echo "yes"
+		return 0
+	} || {
+		echo "no"
+		return 1
+	}
+}
+
+check-nvida-version() {
+	cat /proc/driver/nvidia/version
+}

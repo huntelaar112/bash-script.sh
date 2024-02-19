@@ -1,0 +1,25 @@
+#!/bin/bash
+
+connmanctl services
+connmanctl config ${iInterface} --proxy manual http://127.0.0.1:3128/
+
+sudo ip route replace default via 192.168.1.1
+
+##############
+# stop process using kernel module
+docker stop id id1 vnpff
+#systemctl stop sddm
+
+# unload kernel module
+rmmod nvidia_drm
+rmmod nvidia_modeset
+rmmod nvidia_uvm
+rmmod nvidia
+
+# reload kernel module
+# nvidia_modeset, nvidia_uvm will auto restart
+# after nvidia_drm started
+modprobe nvidia_drm
+
+# restart container
+docker start id id1 vnpff

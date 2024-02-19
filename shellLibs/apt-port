@@ -1,0 +1,214 @@
+#!/bin/bash
+
+source $(which checksystem)
+
+export oscheck=$(checkOsID)
+
+#Updating package database
+apt-update() {
+	[[ ${oscheck} == "alpine" ]] && {
+		apk update
+		[[ $? != 0 ]] && return 1
+	}
+	[[ ${oscheck} == "centos" ]] && {
+		yum update
+		[[ $? != 0 ]] && return 1
+	}
+	[[ ${oscheck} == "debian" || ${oscheck} == "ubuntu" ]] && {
+		apt update
+		[[ $? != 0 ]] && return 1
+	}
+	return 0
+}
+
+#Showing available updates
+# apt list --upgradeable
+apt-list-upgradable() {
+	[[ ${oscheck} == "alpine" ]] && {
+		apk version -v
+		[[ $? != 0 ]] && return 1
+	}
+	[[ ${oscheck} == "centos" ]] && {
+		yum list updates
+		[[ $? != 0 ]] && return 1
+	}
+	[[ ${oscheck} == "debian" || ${oscheck} == "ubuntu" ]] && {
+		apt list --upgradable
+		[[ $? != 0 ]] && return 1
+	}
+	return 0
+}
+
+#Showing installed
+# apt list --installed
+apt-list-installed() {
+	[[ ${oscheck} == "alpine" ]] && {
+		apk version -v
+		[[ $? != 0 ]] && return 1
+	}
+	[[ ${oscheck} == "centos" ]] && {
+		yum list installed
+		[[ $? != 0 ]] && return 1
+	}
+	[[ ${oscheck} == "debian" || ${oscheck} == "ubuntu" ]] && {
+		apt list --installed
+		[[ $? != 0 ]] && return 1
+	}
+
+	return 0
+}
+
+#Showing package info
+# apt show
+apt-show() {
+	local packageName="$1"
+	[[ ${oscheck} == "alpine" ]] && {
+		apk search ${packageName}
+		[[ $? != 0 ]] && return 1
+	}
+	[[ ${oscheck} == "centos" ]] && {
+		yum info ${packageName}
+		[[ $? != 0 ]] && return 1
+	}
+	[[ ${oscheck} == "debian" || ${oscheck} == "ubuntu" ]] && {
+		apt show ${packageName}
+		[[ $? != 0 ]] && return 1
+	}
+	return 0
+}
+
+#Install package
+apt-install() {
+	#echo "$@"
+	[[ ${oscheck} == "alpine" ]] && {
+		for value in "$@"; do
+			apk add ${value} && apk upgrade
+			[[ $? != 0 ]] && return 1
+		done
+	}
+	[[ ${oscheck} == "centos" ]] && {
+		for value in "$@"; do
+			yum install ${value} #&& apk upgrade
+			[[ $? != 0 ]] && return 1
+		done
+	}
+	[[ ${oscheck} == "debian" || ${oscheck} == "ubuntu" ]] && {
+		for value in "$@"; do
+			echo ${value}
+			apt install ${value} #&& apk upgrade
+			[[ $? != 0 ]] && return 1
+		done
+	}
+
+	return 0
+}
+
+#Remove package
+apt-remove() {
+	[[ ${oscheck} == "alpine" ]] && {
+		for value in "$@"; do
+			apk del ${value}
+			[[ $? != 0 ]] && return 1
+		done
+	}
+	[[ ${oscheck} == "centos" ]] && {
+		for value in "$@"; do
+			yum remove ${value} #&& apk upgrade
+			[[ $? != 0 ]] && return 1
+		done
+	}
+	[[ ${oscheck} == "debian" || ${oscheck} == "ubuntu" ]] && {
+		for value in "$@"; do
+			apt remove ${value} #&& apk upgrade
+			[[ $? != 0 ]] && return 1
+		done
+	}
+	return 0
+}
+
+#Searching the package database
+apt-search() {
+	local package="$1"
+	[[ ${oscheck} == "alpine" ]] && {
+		apk search ${package}
+		[[ $? != 0 ]] && return 1
+	}
+	[[ ${oscheck} == "centos" ]] && {
+		yum search ${package}
+		[[ $? != 0 ]] && return 1
+	}
+	[[ ${oscheck} == "debian" || ${oscheck} == "ubuntu" ]] && {
+		apt search ${package}
+		[[ $? != 0 ]] && return 1
+	}
+	return 0
+}
+
+#Remove package and config file
+apt-purge() {
+	local package="$1"
+	[[ ${oscheck} == "alpine" ]] && {
+		apk del --purge ${package}
+		[[ $? != 0 ]] && return 1
+	}
+	[[ ${oscheck} == "centos" ]] && {
+		sudo package-cleanup --orphans ${package}
+		[[ $? != 0 ]] && return 1
+	}
+	[[ ${oscheck} == "debian" || ${oscheck} == "ubuntu" ]] && {
+		apt purge ${package}
+		[[ $? != 0 ]] && return 1
+	}
+	return 0
+}
+
+#Only downloading packages
+apt-install-download-only() {
+
+	[[ ${oscheck} == "alpine" ]] && {
+		for value in "$@"; do
+			apk fetch ${value}
+			[[ $? != 0 ]] && return 1
+		done
+	}
+	[[ ${oscheck} == "centos" ]] && {
+		yum install yum-downloadonly &>/dev/null
+		for value in "$@"; do
+			yum install --downloadonly ${value}
+			[[ $? != 0 ]] && return 1
+		done
+	}
+	[[ ${oscheck} == "debian" || ${oscheck} == "ubuntu" ]] && {
+		for value in "$@"; do
+			apt install --downloadonly ${value}
+			[[ $? != 0 ]] && return 1
+		done
+	}
+	return 0
+}
+
+apt-fix-broken-depend() {
+	[[ ${oscheck} == "debian" || ${oscheck} == "ubuntu" ]] && {
+		apt install -f
+	}
+	return 0
+}
+
+# clean /var/cache/apt/archives && /var/cache/apt/archives/partial/
+apt-clean-cache() {
+	[[ ${oscheck} == "debian" || ${oscheck} == "ubuntu" ]] && {
+		apt clean
+	}
+	return 0
+}
+
+# search what package provide file / header file (.h)	
+apt-file-search() {
+	filename=${1}
+	[[ ${oscheck} == "debian" || ${oscheck} == "ubuntu" ]] && {
+	apt-file search "${filename}"
+	}
+	return 0
+}
+
+

@@ -1,0 +1,66 @@
+{
+	"info": {
+		"_postman_id": "2564ffee-1e89-48f4-aaf1-d8f828ca9929",
+		"name": "SBT_CMND",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "24879360"
+	},
+	"item": [
+		{
+			"name": "idfull Copy",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "api-key",
+						"value": "gAAAAABlNxnU5dCttwLc8LSSCRZJpZVr5XWwHHUAx8wOoZURIO3yo-F0otnMVIkWeUQFAJ2k5Ef-JW5yxvLKw-sx_DcKMYTOxCKV8tC73CYsgbBkdXYi3OA=",
+						"description": "SBT#1001 2000-02-28 2100-02-28",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "image1",
+							"type": "file",
+							"src": []
+						},
+						{
+							"key": "image2",
+							"type": "file",
+							"src": []
+						},
+						{
+							"key": "encode",
+							"value": "1",
+							"type": "text"
+						},
+						{
+							"key": "options",
+							"type": "file",
+							"src": [],
+							"disabled": true
+						}
+					]
+				},
+				"url": {
+					"raw": "10.1.12.160:80/idfull/v1/recognition",
+					"host": [
+						"10",
+						"1",
+						"12",
+						"160"
+					],
+					"port": "80",
+					"path": [
+						"idfull",
+						"v1",
+						"recognition"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

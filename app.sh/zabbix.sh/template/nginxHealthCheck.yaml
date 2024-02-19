@@ -1,0 +1,56 @@
+zabbix_export:
+  version: '6.0'
+  date: '2022-03-14T10:30:58Z'
+  groups:
+    -
+      uuid: 7df96b18c230490a9a0a9e2307226338
+      name: Templates
+  templates:
+    -
+      uuid: 45f6ad3be3364f6a96cb4d93d27332bd
+      template: 'Template Nginx healthcheck'
+      name: 'Template Nginx healthcheck'
+      groups:
+        -
+          name: Templates
+      items:
+        -
+          uuid: 0ec331283ffb4864977d42ba53609aa6
+          name: 'Number of Container'
+          key: nginx.numOfCons
+          delay: '60'
+          value_type: FLOAT
+          description: 'The number of Containers present on this host.'
+          tags:
+            -
+              tag: Application
+              value: Nginx
+
+      discovery_rules:
+        -
+          uuid: 350efc0dcd3d4ee9920c611d09794560
+          name: 'Containers discovery'
+          key: nginx.discoveryCons
+          delay: '300'
+          description: 'Discovery of containers.'
+          item_prototypes:
+            -
+              uuid: de44efa92bfb4e90a2b5f41fb98c8bef
+              name: 'Container [{#NAME}] Status'
+              key: 'nginx.healcheckStatus[{#NAME}]'
+              delay: '10'
+              history: 7d
+              value_type: TEXT
+              units: ""
+              tags:
+                -
+                  tag: Application
+                  value: Nginx
+
+              trigger_prototypes:
+                -
+                  uuid: c31b485187b240c3a8db54073632c90f
+                  expression: "last(/Template Nginx healthcheck/nginx.healcheckStatus[{#NAME}])=\"down\""
+                  name: 'Container {#NAME} - {#UPSTREAM} is down.'
+                  priority: DISASTER
+                  description: 'Enpoint status down!'

@@ -1,0 +1,143 @@
+#!/bin/bash
+
+set -e
+#set -u
+done=no
+exitval=0
+
+namescrpit=${0:2}
+
+function help() {
+	echo "SYNOPSIS:
+  ${namescrpit} source target
+
+DESCRIPTION:
+  Copy files depend on time modify.
+    [ -z | --zip ]
+    [ -h | --help ]
+    [ --newer \"time\" ]
+    [ --olderthan \"time\" ]
+    [ -p | --parents ]
+
+OPTIONS:
+  --newer
+    Time format 2022-01-01 00:00:00 (year-month-date)
+  --olderthan
+    Time format 2022-01-01 00:00:00 (year-month-date)
+  --parents
+    cp all files in sub folders --> parse to directory
+  --zip/-z
+    zip to target/path (not cp)
+
+NOTES:
+- If not have option --> Coppy all file and folder from source to path.
+- Auto create source path if it's not exist (mkdir -p)."
+	exit ${exitval}
+}
+
+SHORT=z,h,p
+LONG=help,zip,olderthan:,newer:,parents
+OPTS=$(getopt -a -n "$0" --options $SHORT --longoptions $LONG -- "$@")
+eval set -- "$OPTS"
+VALID_ARGUMENTS=$#
+if [ "$VALID_ARGUMENTS" -eq 1 ]; then
+	exitval=1
+	help
+fi
+
+source "$(which logshell)"
+
+#parser argument have options (-, --)
+while true; do
+	case "$1" in
+	-z | --zip)
+		ZIP="true"
+		shift 1
+		;;
+	--newer)
+		NTIME="$2"
+		shift 2
+		;;
+	--olderthan)
+		OTIME="$2"
+		shift 2
+		;;
+	-p | --parents)
+		PARENTS="true"
+		shift 1
+		;;
+	-h | --help)
+		help
+		;;
+	--)
+		shift
+		break
+		;;
+	--* | -*)
+		echo "Unexpected option: $1"
+		help
+		;;
+	*) ;;
+	esac
+done
+
+sourcePath=${1}
+targetPath=${2}
+
+[[ -z ${sourcePath} ]] && {
+	log-error "Missing source path."
+	exit 1
+}
+[[ -z ${targetPath} ]] && {
+	log-error "Missing target path."
+	exit 1
+}
+
+[[ -d ${targetPath} ]] || {
+	log-info "Target ${targetPath} is not exist, create it."
+	mkdir -p ${targetPath}
+}
+
+[[ -z ${NTIME} && -z ${OTIME} ]] && {
+	log-info "Copy all data form ${sourcePath} to ${targetPath}"
+	cp -a ${sourcePath} ${targetPath}
+	exit
+	#end cp like (act just like normal cp)
+}
+
+# Zip to target folder
+[[ ${ZIP} == "true" ]] && {
+	[[ -z ${NTIME} ]] || findopt1="-newermt \"${NTIME}\""
+	[[ -z ${OTIME} ]] || findopt2="! -newermt \"${OTIME}\""
+	[[ ${PARENTS} == "true" ]] && {
+		log-run "Zip all file newer than ${NTIME} and older than ${OTIME} form ${sourcePath} to ${targetPath}"
+		findcmd="find ${sourcePath} -type f ${findopt1} ${findopt2} -exec zip -9 -r ${targetPath}/data.zip {} \;"
+		echo "${findcmd}"
+		eval ${findcmd}
+	} || {
+		log-run "Zip file newer than ${NTIME} and older than ${OTIME} form ${sourcePath} to ${targetPath}"
+		findcmd="find ${sourcePath} -type f -maxdepth 1 ${findopt1} ${findopt2} -exec zip -9 -r ${targetPath}/data.zip {} \;"
+		echo "${findcmd}"
+		eval ${findcmd}
+	}
+}
+
+# just copy and keep timestamps
+[[ -z ${ZIP} ]] && {
+	[[ -z ${NTIME} ]] || findopt1="-newermt \"${NTIME}\""
+	[[ -z ${OTIME} ]] || findopt2="! -newermt \"${OTIME}\""
+	[[ ${PARENTS} == "true" ]] && {
+		log-run "Copy all file newer than ${NTIME} and older than ${OTIME} form ${sourcePath} to ${targetPath}"
+		findcmd="find ${sourcePath} -type f ${findopt1} ${findopt2} -exec cp --parents --preserve=timestamps {} ${targetPath} \;"
+		echo "${findcmd}"
+		eval "${findcmd}"
+	} || {
+		log-run "Copy file newer than ${NTIME} and older than ${OTIME} form ${sourcePath} to ${targetPath}"
+		findcmd="find ${sourcePath} -type f -maxdepth 1 ${findopt1} ${findopt2} -exec cp --preserve=timestamps {} ${targetPath} \;"
+		echo "${findcmd}"
+		eval ${findcmd}
+	}
+}
+
+echo "Done"
+done=yes

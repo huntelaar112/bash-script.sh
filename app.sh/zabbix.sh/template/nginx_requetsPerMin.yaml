@@ -1,0 +1,87 @@
+zabbix_export:
+  version: '6.0'
+  date: '2022-03-14T10:30:58Z'
+  groups:
+    -
+      uuid: 7df96b18c230490a9a0a9e2307226338
+      name: Templates
+  templates:
+    -
+      uuid: e51fde8c573a44aaaa417541d7f622e6
+      template: 'Template Nginx count requets'
+      name: 'Template Nginx count requets'
+      groups:
+        -
+          name: Templates
+      items:
+        -
+          uuid: c96ba1e3161a416c9479ace86d979018
+          name: 'Number of nginx requets last minute.'
+          key: nginxrqs.lastMinutes
+          delay: '60'
+          value_type: UNSIGNED
+          description: 'Number of nginx requets last minute.'
+          tags:
+            -
+              tag: Application
+              value: Nginx
+        -
+          uuid: 5732303b7995412da75be895b58102d1
+          name: 'Number of nginx requets last minute return code 200.'
+          key: nginxrqs.lastMinutes200
+          delay: '60'
+          value_type: UNSIGNED
+          description: 'Number of nginx requets last minute return code 200.'
+          tags:
+            -
+              tag: Application
+              value: Nginx
+        -
+          uuid: 244a30f3f7664f1b9d668ec6bfd61a1c
+          name: 'Number of nginx requets last minute take more than 20s.'
+          key: nginxrqs.lastMinutesAbove20
+          delay: '60'
+          value_type: UNSIGNED
+          description: 'Number of nginx requets last minute take more than 20s.'
+          tags:
+            -
+              tag: Application
+              value: Nginx
+          triggers:
+            -
+              uuid: 049f4403b022449fb960d9efdeac529c
+              expression: 'last(/Template Nginx count requets/nginxrqs.lastMinutesAbove20)>1'
+              name: 'Requets process more than 20s'
+              event_name: 'Requets process more than 20s'
+              priority: AVERAGE
+              description: 'Requets process more than 20s'
+  
+  graphs:
+    -
+      uuid: 25d2900c5085421ca80c0d02aa3b6cb1
+      name: 'Number of nginx requets last minute'
+      graph_items:
+        -
+          color: C80000
+          item:
+            host: 'Template Nginx count requets'
+            key: nginxrqs.lastMinutes
+    -
+      uuid: 6e93ae5442a7493fa4babd0984c64188
+      name: 'Number of nginx requets last minute take more than 20s.'
+      graph_items:
+        -
+          color: C80000
+          item:
+            host: 'Template Nginx count requets'
+            key: nginxrqs.lastMinutesAbove20
+    -
+      uuid: d8daecf989ab446b9d7f3694350a57cb
+      name: 'Number of nginx requets last minute return code 200.'
+      graph_items:
+        -
+          color: C80000
+          item:
+            host: 'Template Nginx count requets'
+            key: nginxrqs.lastMinutes200
+

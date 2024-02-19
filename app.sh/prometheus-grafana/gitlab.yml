@@ -1,0 +1,72 @@
+stages:
+  - gitleaks
+  - dependencycheck
+  - sonarqube
+  - deploy2dev
+
+sonarqube:
+  only:
+    - develop
+  stage: sonarqube
+  image:
+    name: sonarsource/sonar-scanner-cli:latest
+    entrypoint: [ "" ]
+  variables:
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
+    #SONAR_HOST_URL: https://sq.runsystem.info
+    SONAR_TOKEN: "${SONAR_TOKEN}"
+    SONAR_SCANNER_OPTS: "-Dsonar.projectKey=${SONAR_PROJECT_KEY}"
+  script:
+    - sonar-scanner -Dsonar.sources=. -Dsonar.dependencyCheck.htmlReportPath=./dependency-check-report.html -Dsonar.host.url=https://sq.runsystem.info -Dsonar.exclusions=**/dependency-check-report.html,**/*.java,**/*.yml -Dsonar.dependencyCheck.severity.critical=7.0
+  allow_failure: true
+
+gitleaks:
+  stage: gitleaks
+  image:
+    name: zricethezav/gitleaks:latest
+    entrypoint: [ "" ]
+  script:
+    - git config --global --add safe.directory $CI_PROJECT_DIR
+    - gitleaks detect -v ./
+  allow_failure: true
+
+dependencycheck:
+  only:
+    - develop
+  stage: dependencycheck
+  image:
+    name: owasp/dependency-check:latest
+    entrypoint: [ "" ]
+  script:
+    - /usr/share/dependency-check/bin/dependency-check.sh --project Project --out . --scan . --format "HTML" --format "CSV" --format "JSON" --enableExperimental --failOnCVSS 7 || true
+  artifacts:
+    paths:
+      - ./dependency-check-report.html
+      - ./dependency-check-report.csv
+      - ./dependency-check-report.csv
+    expire_in: 1 week
+  allow_failure: true
+
+deploy2dev:
+  stage: deploy2dev
+  only:
+    - develop
+  before_script:
+    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    - echo "$SSH_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -p $SSH_PORT $SSH_IP>> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+  script:
+    - ssh $SSH_USER@$SSH_IP -p $SSH_PORT "
+      cd /data/admin &&
+      git pull &&
+      cp .env.dev.example .env &&
+      npm i &&
+      npm run build
+      "
+
+
+
