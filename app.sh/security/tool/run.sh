@@ -95,7 +95,7 @@ option="${2}"
     -o /output/wpscan-output.txt  \
     --url "${URL_SCAN}" \
     --api-token "${WPS_TOKEN}" \
-    -e vp \
+    -e vp --random-user-agent \
     --plugins-detection mixed
 #    --http-auth "${HTTP_AUTH}"
 
@@ -103,3 +103,4 @@ option="${2}"
     log-info "Resutl save to $(pwd)/${resultDir}/wpscan-output.txt"
   }
 }
+
