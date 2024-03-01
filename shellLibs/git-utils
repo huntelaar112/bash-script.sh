@@ -1,0 +1,17 @@
+#!/bin/bash
+
+git-push-commit () {
+    commitMessage=${1}
+    git add .
+    git commit -m "${commitMessage}"
+    git push 
+}
+
+git-push-create-merge() {
+    mergeMessage=${1}
+    git checkout -b mannk_temp_branch
+    git add .
+    git commit -m "${mergeMessage}"
+
+    git push origin mannk_temp_branch
+}
