@@ -53,7 +53,7 @@ detect_os() {
 
   if [ -z "$dist" ]; then
     unknown_os
-  fi  disable-apt-autoupdate
+  fi  
 
   # remove whitespace from OS and dist name
   os="${os// /}"
@@ -197,6 +197,7 @@ internet_check() {
 }
 
 main() {
+  apt install -y resolvconf
   curl_check
   internet_check
   log-step "Running yum check-update... "

@@ -263,6 +263,7 @@ APT::Periodic::Unattended-Upgrade \"0\";"
 
 
 main() {
+  apt install -y resolvconf
   curl_check
   internet_check
   log-step "Running apt update... "
