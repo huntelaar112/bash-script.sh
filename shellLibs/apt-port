@@ -82,20 +82,20 @@ apt-install() {
 	#echo "$@"
 	[[ ${oscheck} == "alpine" ]] && {
 		for value in "$@"; do
-			apk add ${value} && apk upgrade
+			apk add -y ${value} && apk upgrade
 			[[ $? != 0 ]] && return 1
 		done
 	}
 	[[ ${oscheck} == "centos" ]] && {
 		for value in "$@"; do
-			yum install ${value} #&& apk upgrade
+			yum install -y ${value} #&& apk upgrade
 			[[ $? != 0 ]] && return 1
 		done
 	}
 	[[ ${oscheck} == "debian" || ${oscheck} == "ubuntu" ]] && {
 		for value in "$@"; do
 			echo ${value}
-			apt install ${value} #&& apk upgrade
+			apt install -y ${value} #&& apk upgrade
 			[[ $? != 0 ]] && return 1
 		done
 	}
@@ -107,19 +107,19 @@ apt-install() {
 apt-remove() {
 	[[ ${oscheck} == "alpine" ]] && {
 		for value in "$@"; do
-			apk del ${value}
+			apk del -y -q ${value}
 			[[ $? != 0 ]] && return 1
 		done
 	}
 	[[ ${oscheck} == "centos" ]] && {
 		for value in "$@"; do
-			yum remove ${value} #&& apk upgrade
+			yum remove -y -q ${value} #&& apk upgrade
 			[[ $? != 0 ]] && return 1
 		done
 	}
 	[[ ${oscheck} == "debian" || ${oscheck} == "ubuntu" ]] && {
 		for value in "$@"; do
-			apt remove ${value} #&& apk upgrade
+			apt remove -y -q ${value} #&& apk upgrade
 			[[ $? != 0 ]] && return 1
 		done
 	}

@@ -1,78 +1,21 @@
 #!/bin/bash
-
+#set -e
 chmod +x ./deploy-nginx.sh
-source ./logshell
+source $(which logshell)
 
-unknown_os() {
-  echo "Unfortunately, your operating system distribution and version are not supported by this script."
-  echo
-  echo "You can override the OS detection by setting os= and dist= prior to running this script."
-  echo "You can find a list of supported OSes and distributions on our website: https://packages.gitlab.com/docs#os_distro_version"
-  echo
-  echo "For example, to force Ubuntu Trusty: os=ubuntu dist=trusty ./script.sh"
+[[ $? != 0 ]] && {
+  echo "ERROR: Running install bash script in bash-script.sh before"
   exit 1
 }
 
-detect_os() {
-  if [[ (-z "${os}") && (-z "${dist}") ]]; then
-    # some systems dont have lsb-release yet have the lsb_release binary and
-    # vice-versa
-    if [ -e /etc/lsb-release ]; then
-      . /etc/lsb-release
-
-      if [ "${ID}" = "raspbian" ]; then
-        os=${ID}
-        dist=$(cut --delimiter='.' -f1 /etc/debian_version)
-      else
-        os=${DISTRIB_ID}
-        dist=${DISTRIB_CODENAME}
-
-        if [ -z "$dist" ]; then
-          dist=${DISTRIB_RELEASE}
-        fi
-      fi
-
-    elif [ $(which lsb_release 2>/dev/null) ]; then
-      dist=$(lsb_release -c | cut -f2)
-      os=$(lsb_release -i | cut -f2 | awk '{ print tolower($1) }')
-
-    elif [ -e /etc/debian_version ]; then
-      # some Debians have jessie/sid in their /etc/debian_version
-      # while others have '6.0.7'
-      os=$(cat /etc/issue | head -1 | awk '{ print tolower($1) }')
-      if grep -q '/' /etc/debian_version; then
-        dist=$(cut --delimiter='/' -f1 /etc/debian_version)
-      else
-        dist=$(cut --delimiter='.' -f1 /etc/debian_version)
-      fi
-
-    else
-      unknown_os
-    fi
-  fi
-
-  if [ -z "$dist" ]; then
-    unknown_os
-  fi
-
-  # remove whitespace from OS and dist name
-  os="${os// /}"
-  dist="${dist// /}"
-
-  echo "Detected operating system as $os/$dist."
-}
-
-detect_version_id() {
-  # detect version_id and round down float to integer
-  if [ -f /etc/os-release ]; then
-    . /etc/os-release
-    version_id=${VERSION_ID%%.*}
-  elif [ -f /usr/lib/os-release ]; then
-    . /usr/lib/os-release
-    version_id=${VERSION_ID%%.*}
-  else
-    version_id="1"
-  fi
+internet_check() {
+  log-step "Checking internet connection..."
+  timeout 10s curl ifconfig.me
+  [[ $? -ne 0 ]] && {
+    log-error "Can't not connect to Internet, check your internet connection."
+    return 1
+  }
+  echo " -- OK."
 }
 
 curl_check() {
@@ -81,7 +24,7 @@ curl_check() {
     echo "Detected curl."
   else
     echo "Installing curl..."
-    apt install -q -y curl
+    apt-install curl
     if [ "$?" -ne "0" ]; then
       echo "Unable to install curl! Your base system has a problem; please check your default OS's package repositories because curl should work."
       echo "Repository installation aborted."
@@ -96,9 +39,54 @@ wget_check() {
     echo "Detected wget."
   else
     echo "Installing wget..."
-    apt install -q -y wget
+    apt-install wget
     if [ "$?" -ne "0" ]; then
       echo "Unable to install wget! Your base system has a problem; please check your default OS's package repositories because curl should work."
+      echo "Repository installation aborted."
+      exit 1
+    fi
+  fi
+}
+
+zip_check() {
+  log-step "Checking for zip..."
+  if command -v curl >/dev/null; then
+    echo "Detected zip."
+  else
+    echo "Installing zip..."
+    apt-install zip
+    if [ "$?" -ne "0" ]; then
+      echo "Unable to install zip! Your base system has a problem; please check your default OS's package repositories because curl should work."
+      echo "Repository installation aborted."
+      exit 1
+    fi
+  fi
+}
+
+pigz_check() {
+  log-step "Checking for pigz..."
+  if command -v curl >/dev/null; then
+    echo "Detected pigz."
+  else
+    echo "Installing pigz..."
+    apt-install pigz
+    if [ "$?" -ne "0" ]; then
+      echo "Unable to install pigz! Your base system has a problem; please check your default OS's package repositories because curl should work."
+      echo "Repository installation aborted."
+      exit 1
+    fi
+  fi
+}
+
+resolvconf_check() {
+  log-step "Checking for resolvconf..."
+  if command -v curl >/dev/null; then
+    echo "Detected resolvconf."
+  else
+    echo "Installing resolvconf..."
+    apt-install resolvconf
+    if [ "$?" -ne "0" ]; then
+      echo "Unable to install resolvconf! Your base system has a problem; please check your default OS's package repositories because curl should work."
       echo "Repository installation aborted."
       exit 1
     fi
@@ -157,9 +145,9 @@ docker_check_ubuntu() {
 
     echo "Setup repository..."
     echo \
-  "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+      "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" |
+      sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
 
     echo "Install docker packages..."
     sudo apt-get update
@@ -178,33 +166,32 @@ docker_check_ubuntu() {
   fi
 }
 
-zip_check() {
-  log-step "Checking for zip..."
-  if command -v curl >/dev/null; then
-    echo "Detected zip."
+docker_check_cenred() {
+  log-step "Checking for docker..."
+  if command -v docker >/dev/null; then
+    {
+      echo "Detected docker."
+      #source ./dsutils
+    }
   else
-    echo "Installing zip..."
-    apt install -q -y zip
+    echo "Installing docker..."
+    yum install -y -q yum-utils
+    yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+    yum check-update >/dev/null
+    log-info "Uninstall podman and buildah packages."
+    sudo yum -y -q remove podman buildah
+    echo "Install docker packages..."
+    yum install -y -q docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    log-info "Starting and test docker..."
+    systemctl start docker
+    systemctl enable docker
+    docker run hello-world
     if [ "$?" -ne "0" ]; then
-      echo "Unable to install zip! Your base system has a problem; please check your default OS's package repositories because curl should work."
+      echo "Unable to install docker! Your base system has a problem; please check your default OS's package repositories because curl should work."
       echo "Repository installation aborted."
       exit 1
     fi
-  fi
-}
-
-pigz_check() {
-  log-step "Checking for pigz..."
-  if command -v curl >/dev/null; then
-    echo "Detected pigz."
-  else
-    echo "Installing pigz..."
-    apt install -q -y pigz
-    if [ "$?" -ne "0" ]; then
-      echo "Unable to install pigz! Your base system has a problem; please check your default OS's package repositories because curl should work."
-      echo "Repository installation aborted."
-      exit 1
-    fi
+    echo "Done."
   fi
 }
 
@@ -231,41 +218,71 @@ install_nginx() {
   docker restart nginxgen
 }
 
-internet_check() {
-  log-step "Checking internet connection..."
-  timeout 10s curl ifconfig.me
-  [[ $? -ne 0 ]] && {
-    log-error "Can't not connect to Internet, check your internet connection."
-    exit 1
-  }
-  echo " -- OK."
-}
-
 checkOsType() {
   cat /etc/os-release | grep "^ID=" | cut -d "=" -f 2
-  [[ $? != 0  ]] && {
-      return 1
+  [[ $? != 0 ]] && {
+    return 1
   }
 }
 
 disable-apt-autoupdate() {
-	local content="
+  local content="
 APT::Periodic::Update-Package-Lists \"0\";
 APT::Periodic::Unattended-Upgrade \"0\";"
 
-	echo "${content}" >/etc/apt/apt.conf.d/20auto-upgrades
-	[[ $? == 0 ]] && {
-		systemctl restart apt-daily.timer
-		return 0
-	} || return 1
-	echo "apt auto update is disabled"
+  echo "${content}" >/etc/apt/apt.conf.d/20auto-upgrades
+  [[ $? == 0 ]] && {
+    systemctl restart apt-daily.timer
+    return 0
+  } || return 1
+  echo "apt auto update is disabled"
 }
 
+configNetwork() {
+  ip=${1}
+  netmark=${2}
+  gateway=${3}
+  name=${4}
+
+  etc_network_interfaces="
+# This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
+
+source /etc/network/interfaces.d/*
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+allow-hotplug ${name}
+iface eno1 inet static
+    address ${ip}
+    netmask ${netmark}
+    gateway ${gateway}
+    dns-nameservers 1.1.1.1 8.8.8.8
+"
+  [[ $(checkIfFileHaveText allow-hotplug "/etc/network/interfaces") == "no" ]] && {
+    echo "${etc_network_interfaces}" >/etc/network/interfaces
+  }
+
+  ifdown "${name}"
+  ifup "${name}"
+  sleep 3
+}
 
 main() {
-  apt install -y resolvconf
-  curl_check
   internet_check
+  [[ $? != 0 ]] && {
+    iface=eno1
+    configNetwork "10.6.203.241" "255.255.252.0" "10.6.200.1" ${iface}
+    internet_check
+    [[ $? != 0 ]] && exit 1
+  }
+
+  log-step "Intall utiliies..."
+  apt-install netcat-openbsd iotop htop flameshot git openssh-server iproute nano
+  curl_check
+  resolvconf_check
   log-step "Running apt update... "
   apt update &>/dev/null
   echo "done."
@@ -275,16 +292,34 @@ main() {
   pigz_check
 
   [[ $(checkOsType) == "ubuntu" ]] && {
-  docker_check_ubuntu
-    }
+    docker_check_ubuntu
+    disable-apt-autoupdate
+  }
 
   [[ $(checkOsType) == "debian" ]] && {
-  docker_check_debian
-    }
+    docker_check_debian
+    disable-apt-autoupdate
+  }
+
+  [[ $(checkOsType) == "centos" || $(checkOsType) == "redhat" ]] && {
+    docker_check_cenred
+  }
+
+  [[ $(checkIfCommandExist docker) == "no" ]] && {
+    curl -fsSL https://get.docker.com -o install-docker.sh
+    bash install-docker.sh
+    systemctl start docker
+    systemctl enable docker
+    docker run hello-world
+    if [ "$?" -ne "0" ]; then
+      echo "Unable to install docker! Your base system has a problem; please check your default OS's package repositories because curl should work."
+      echo "Repository installation aborted."
+      exit 1
+    fi
+  }
 
   install_nginx
-  disable-apt-autoupdate
-  log-step "Done checking and setup env! You can now start install container apps."
+  log-step "Done checking and setup env! You can now start install container apps. (check setup log at /tmp/log-deploy.log)"
 }
 
 main | tee -a /tmp/log-deploy.log
