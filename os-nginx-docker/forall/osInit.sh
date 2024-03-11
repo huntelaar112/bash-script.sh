@@ -2,7 +2,7 @@
 #set -e
 chmod +x ./deploy-nginx.sh
 source $(which logshell)
-sourec $(which checksystem)
+source $(which checksystem)
 
 [[ $? != 0 ]] && {
   echo "ERROR: Running install bash script in bash-script.sh before"
