@@ -271,6 +271,7 @@ iface eno1 inet static
 }
 
 main() {
+  curl_check
   internet_check
   [[ $? != 0 ]] && {
     iface=eno1
@@ -281,7 +282,6 @@ main() {
 
   log-step "Intall utiliies..."
   apt-install netcat-openbsd iotop htop flameshot git openssh-server iproute nano
-  curl_check
   resolvconf_check
   log-step "Running apt update... "
   apt update &>/dev/null
