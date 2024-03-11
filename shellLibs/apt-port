@@ -82,20 +82,20 @@ apt-install() {
 	#echo "$@"
 	[[ ${oscheck} == "alpine" ]] && {
 		for value in "$@"; do
-			apk add -y ${value} && apk upgrade
+			apk add -y -q ${value} && apk upgrade
 			[[ $? != 0 ]] && return 1
 		done
 	}
 	[[ ${oscheck} == "centos" ]] && {
 		for value in "$@"; do
-			yum install -y ${value} #&& apk upgrade
+			yum install -y -q ${value} #&& apk upgrade
 			[[ $? != 0 ]] && return 1
 		done
 	}
 	[[ ${oscheck} == "debian" || ${oscheck} == "ubuntu" ]] && {
 		for value in "$@"; do
 			echo ${value}
-			apt install -y ${value} #&& apk upgrade
+			apt install -y -q ${value} #&& apk upgrade
 			[[ $? != 0 ]] && return 1
 		done
 	}
