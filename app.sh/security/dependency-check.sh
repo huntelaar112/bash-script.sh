@@ -22,13 +22,13 @@ if [ ! -d "$CACHE_DIRECTORY" ]; then
 fi
 
 # Make sure we are using the latest version
-docker pull owasp/dependency-check:$DC_VERSION
+#docker pull owasp/dependency-check:$DC_VERSION
+#docker pull mannk98/dependency-check:$DC_VERSION
 
 docker run --rm \
     -e user=root \
     -u 0:0 \
     --volume "${YOUR_REPO}":/src:z \
-    --volume "${DATA_DIRECTORY}":/usr/share/dependency-check/data:z \
     --volume $(pwd)/scan-results/dependency-check-report:/report:z \
     mannk98/dependency-check:$DC_VERSION \
     --scan /src \
@@ -41,3 +41,5 @@ docker run --rm \
 # --suppression "/src/security/dependency-check-suppression.xml"
 #-e user=root \
 #-u 0:0 \
+
+#    --volume "${DATA_DIRECTORY}":/usr/share/dependency-check/data:z \
