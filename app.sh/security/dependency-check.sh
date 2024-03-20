@@ -4,7 +4,8 @@ set -e
 configpath="${1}"
 source ${configpath}
 
-DC_VERSION="latest"
+#DC_VERSION="latest"
+DC_VERSION="9.0.10"
 DC_DIRECTORY="${HOME}/OWASP-Dependency-Check"
 #DC_DIRECTORY=/tmp/OWASP-Dependency-Check
 DC_PROJECT="dependency-check scan: $(pwd)"
@@ -29,14 +30,14 @@ docker run --rm \
     --volume "${YOUR_REPO}":/src:z \
     --volume "${DATA_DIRECTORY}":/usr/share/dependency-check/data:z \
     --volume $(pwd)/scan-results/dependency-check-report:/report:z \
-    owasp/dependency-check:$DC_VERSION \
+    mannk98/dependency-check:$DC_VERSION \
     --scan /src \
     --format "JSON" --format "CSV" --format "HTML" \
     --project "$DC_PROJECT" \
     --out /report \
     --enableExperimental --failOnCVSS 7
-    # Use suppression like this: (where /src == $pwd)
-    # --suppression "/src/security/dependency-check-suppression.xml"
 
-    #-e user=root \
-    #-u 0:0 \
+# Use suppression like this: (where /src == $pwd)
+# --suppression "/src/security/dependency-check-suppression.xml"
+#-e user=root \
+#-u 0:0 \
