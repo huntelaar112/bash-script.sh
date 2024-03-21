@@ -5,7 +5,8 @@ configpath="${1}"
 source ${configpath}
 
 #DC_VERSION="latest"
-DC_VERSION="9.0.10"
+image="mannk98/dependency-check"
+DC_VERSION="latest"
 DC_DIRECTORY="${HOME}/OWASP-Dependency-Check"
 #DC_DIRECTORY=/tmp/OWASP-Dependency-Check
 DC_PROJECT="dependency-check scan: $(pwd)"
@@ -30,11 +31,11 @@ docker run --rm \
     -u 0:0 \
     --volume "${YOUR_REPO}":/src:z \
     --volume $(pwd)/scan-results/dependency-check-report:/report:z \
-    mannk98/dependency-check:$DC_VERSION \
+    "${image}":$DC_VERSION \
     --scan /src \
     --format "JSON" --format "CSV" --format "HTML" \
     --project "$DC_PROJECT" \
-    --out /report \
+    --out /report --noupdate \
     --enableExperimental --failOnCVSS 7
 
 # Use suppression like this: (where /src == $pwd)
