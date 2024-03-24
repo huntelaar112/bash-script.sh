@@ -3,8 +3,9 @@
 #check if container is running or not
 #arg: path to container name
 function docker-container-is-running() {
-	[[ $1 ]] || {
-		echo "Missing container name to check parameter"
+	[[ ! $1 || $1 == "-h" ]] && {
+		echo "Missing container name to check parameter
+		Use: $FUNCNAME <container-name>"
 		return 1
 	}
 	#grep -qie: quiet (don't redirect to stdout/err), ignore uppercase(R)
@@ -15,8 +16,9 @@ function docker-container-is-running() {
 #check if docker image is exist or not
 #arg: path to docker image
 function docker-image-is-exist() {
-	[[ $1 ]] || {
-		echo "Missing container name to check parameter"
+	[[ ! $1 || $1 == "-h" ]] && {
+		echo "Missing container name to check parameter
+		Use: $FUNCNAME <docker-image>"
 		return 1
 	}
 	docker image inspect -f '{{.RepoTags}} {{.Created}}' "${1}" &>/dev/null
@@ -25,8 +27,9 @@ function docker-image-is-exist() {
 #check if docker container is exist or not
 #arg: path to docker container
 function docker-container-is-exist() {
-	[[ $1 ]] || {
-		echo "Missing container name to check parameter"
+	[[ ! $1 || $1 == "-h" ]] && {
+		echo "Missing container name to check parameter
+		Use: $FUNCNAME <container-name>"
 		return 1
 	}
 	docker container inspect -f '{{.State}}' "$1" &>/dev/null
@@ -36,6 +39,10 @@ function docker-container-is-exist() {
 #args: [ip] [subnet]
 #return 0 if success, 1 if false
 function docker-network-create() {
+	[[ ! $1 || $1 == "-h" ]] && {
+		echo "Use: $FUNCNAME <network-name> <sub-net>"
+		return 1
+	}
 	local OCRNETWORK=$1
 	local OCRNETWORK_SUBNET=$2
 	docker network create -o "com.docker.network.bridge.name"="${OCRNETWORK}" --subnet="${OCRNETWORK_SUBNET}" ${OCRNETWORK} && return 0 || return 1
@@ -45,7 +52,7 @@ function docker-network-create() {
 #args: [subnet]
 #return subnet of ocrnetwork
 function docker-network-get-cidr() {
-	[[ $1 ]] || return 1
+	[[ ! $1 || $1 == "-h" ]] && return 1
 	echo -n "$(docker inspect -f '{{range $k, $v := .IPAM.Config}}{{printf $v.Subnet}}{{end}}' "${1}")"
 }
 
@@ -165,7 +172,7 @@ docker-findOverlay2() {
 }
 
 docker-updateConRes() {
-	[[ $1 == "-h" ]] && {
+	[[ ! $1 || $1 == "-h" ]] && {
 		echo "Usage: sudo $FUNCNAME <conname> <cpus> <ram> <ram+swap>
 		example: $FUNCNAME nginx 4 500M 1GB"
 		return 0
@@ -182,8 +189,9 @@ docker-updateConRes() {
 	}
 }
 
+######################## GET INFO
 docker-getIPInfo() {
-	[[ $1 == "-h" ]] && {
+	[[ ! $1 || $1 == "-h" ]] && {
 		echo "Usage: ${FUNCNAME} <container_name>"
 		return 0
 	}
@@ -192,7 +200,7 @@ docker-getIPInfo() {
 }
 
 docker-getBindInfo() {
-	[[ $1 == "-h" ]] && {
+	[[ ! $1 || $1 == "-h" ]] && {
 		echo "Usage: ${FUNCNAME} <container_name>"
 		return 0
 	}
@@ -204,4 +212,30 @@ docker-getBindInfo() {
 
 docker-execBash() {
 	docker exec -it "${1}" bash
+}
+
+######################## BACKUP VOLUME
+function docker-backup-volume() {
+	[[ ! $1 || $1 == "-h" ]] && {
+		echo "Usage: ${FUNCNAME} <container_name_have_volume_need_to_backup> <path-of-volume-mount-inside-container>"
+		return 0
+	}
+	containername=${1}
+	volumeMountInside=${2}
+
+	docker run --rm --volumes-from "${containername}" -v $(pwd):/backup debian:12.5 tar cvf /backup/"${containername}".bak.tar -C "${volumeMountInside}" .
+}
+
+function docker-restore-volume() {
+	[[ ! $1 || $1 == "-h" ]] && {
+		echo "Usage: ${FUNCNAME} <restore_voulme> <backup_data_path_file_tar>
+		(auto create restore_voulme_name if it's not existed )"
+		return 0
+	}
+	restoreVolumeName=${1}
+	backup_data_path_file_tar=${2}
+	filename=$(basename "$backup_data_path_file_tar")
+
+	docker volume create "${restoreVolumeName}"
+	docker run --rm -v "${restoreVolumeName}":/volume_data -v "${backup_data_path_file_tar}":/backup/"$filename" debian:12.5 bash -c "cd /volume_data && tar xvf /backup/""$filename"" --strip 1"
 }
