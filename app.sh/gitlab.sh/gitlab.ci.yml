@@ -1,0 +1,70 @@
+stages:
+  - gitleaks
+  - dependencycheck
+  - sonarqube
+  - license-scancode
+  
+sonarqube:
+ only:
+   - master
+ stage: sonarqube
+ image:
+   name: sonarsource/sonar-scanner-cli:latest
+   entrypoint: [ "" ]
+ variables:
+   SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
+   SONAR_HOST_URL: https://sq.runsystem.info
+   SONAR_TOKEN: "${SONAR_TOKEN}"
+   SONAR_SCANNER_OPTS: "-Dsonar.projectKey=${SONAR_PROJECT_KEY}"
+ cache:
+   key: "${CI_JOB_NAME}"
+   paths:
+     - .sonar/cache
+ script:
+   - sonar-scanner -Dsonar.sources=. -Dsonar.dependencyCheck.htmlReportPath=./dependency-check-report.html -Dsonar.exclusions=**/dependency-check-report.html,**/*.java,**/*.yml -Dsonar.dependencyCheck.severity.critical=7.0
+ allow_failure: true
+ 
+gitleaks:
+  only:
+   - master
+  stage: gitleaks
+  image:
+    name: zricethezav/gitleaks:latest
+    entrypoint: [""]
+  script:
+    - git config --global --add safe.directory $CI_PROJECT_DIR
+    - gitleaks detect -v ./
+  allow_failure: true
+
+dependencycheck:
+  only:
+  - master
+  stage: dependencycheck
+  image:
+    name: mannk98/dependency-check:latest
+    entrypoint: [ "" ]
+  script:
+    - /usr/share/dependency-check/bin/dependency-check.sh --project Project --out . --scan . --format "HTML" --format "CSV" --format "JSON" --enableExperimental --failOnCVSS 7 --noupdate || true
+  artifacts:
+    paths:
+      - ./dependency-check-report.html
+      - ./dependency-check-report.csv
+      - ./dependency-check-report.csv
+    expire_in: 1 week
+  allow_failure: true
+
+license-scancode:
+ only:
+   - master
+ stage: license-scancode
+ image: gianlucadb0/scancode-toolkit
+ script:
+   - scancode -clpeui -n 4 --cyclonedx results-cyclonedx --spdx-tv results-spdx --json-pp results.json ./ || true
+ artifacts:
+   paths:
+     - results-cyclonedx
+     - results-spdx
+     - results.json
+   expire_in: 1 week
+ when: always
+ allow_failure: true
