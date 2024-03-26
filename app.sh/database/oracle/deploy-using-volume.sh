@@ -21,3 +21,5 @@ docker run -idt --hostname ${name} --name ${name} -e TZ=Asia/Ho_Chi_Minh --resta
 
 #       --ulimit nofile=1024:65536 --ulimit nproc=2047:16384 --ulimit stack=10485760:33554432 --ulimit memlock=3221225472 \
 #        -v ${volumename}:/opt/oracle \
+
+##################### tablespace need to put inside /opt/oracle/oradata, if not mount  -v ${volumename}:/opt/oracle \
