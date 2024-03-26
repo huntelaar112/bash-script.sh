@@ -36,7 +36,20 @@ impdp app_crm/Gmo#2024@pdb1 directory=DUMPDIRECTORY dumpfile=export.dmp logfile=
 
 
 # rebuild in valid objects
-#sqlplus ${DB_USERNAME}/${DB_USER_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_SID} <<EOF
-#@/opt/oracle/product/19c/dbhome_1/rdbms/admin/utlrp.sql
-#exit
-#EOF
+sqlplus / as sysdba/"${DB_USER_PASSWORD}"@${DB_HOST}:${DB_PORT}/${DB_SID} <<EOF
+@/opt/oracle/product/19c/dbhome_1/rdbms/admin/utlrp.sql
+exit
+EOF
+
+# enable archivelog (use rman for backup)
+sqlplus / as sysdba/"${DB_USER_PASSWORD}"@${DB_HOST}:${DB_PORT}/${DB_SID} <<EOF
+SHUTDOWN IMMEDIATE;
+STARTUP MOUNT;
+ALTER DATABASE ARCHIVELOG;
+ALTER DATABASE OPEN;
+ARCHIVE LOG LIST;
+exit
+EOF
+
+
+### docs RMAN: https://docs.oracle.com/en/database/oracle/oracle-database/19/bradv/getting-started-rman.html#GUID-2DFA0B10-38BD-435F-981D-A665D81243F3

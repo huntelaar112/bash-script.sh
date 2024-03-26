@@ -16,6 +16,7 @@ docker run -idt --hostname ${name} --name ${name} -e TZ=Asia/Ho_Chi_Minh --resta
         -e ORACLE_PDB=${pdb} \
         -e ORACLE_PWD=${password} \
         -e ORACLE_CHARACTERSET=AL32UTF8 \
+        -e ENABLE_ARCHIVELOG=true \
         -v ${volumename}:/opt/oracle/oradata \
         container-registry.oracle.com/database/enterprise:19.3.0.0
 
