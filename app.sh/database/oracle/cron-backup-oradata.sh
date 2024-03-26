@@ -11,5 +11,5 @@ find "${backupDir}" -type f -mtime +7 -exec rm {} \;
 
 
 ## chmod +x and  cp this file to /bin
-## crontab -e and add 
+## crontab -e and add
 ## -->  0 0 * * * cron-backup-oradata.sh
