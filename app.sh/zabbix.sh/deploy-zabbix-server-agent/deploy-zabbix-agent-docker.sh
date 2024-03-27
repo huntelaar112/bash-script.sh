@@ -46,6 +46,7 @@ docker run --name ${conname} --hostname ${conname} --restart always --cpus 2 -m 
   --network "${dockerNetwork}" -e ZBX_SERVER_HOST="${server_url}" -e NGINX_IP="${nginx_ip}" \
   --privileged -p "${exposePort}":10050 --user root -e TZ=Asia/Ho_Chi_Minh ${containerIP} \
   -v /mnt/containerdata/zabbix-agent/etc_zabbix:/mnt/containerdata/zabbix-agent/etc_zabbix \
+  -v "${nginxDir}":/mnt/containerdata/nginxgen \
   -v /var/run/docker.sock:/var/run/docker.sock -idt "${image}"
 __
 )
