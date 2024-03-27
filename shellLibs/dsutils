@@ -210,6 +210,10 @@ docker-getBindInfo() {
 	docker inspect --format="{{range .Mounts}} Type:{{.Type}} RW:{{.RW}} {{.Source}}:{{.Destination}}; {{end}}" "${conname}"
 }
 
+function docker-getIPAll() {
+	docker inspect -f '{{.Name}} - {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(docker ps -q)
+}
+
 docker-execBash() {
 	docker exec -it "${1}" bash
 }
