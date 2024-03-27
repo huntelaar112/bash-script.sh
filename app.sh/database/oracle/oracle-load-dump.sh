@@ -1,12 +1,13 @@
 #!/bin/bash
 
+## run this script as non root user
 ## cp file dump (export.dmp) to container:/opt/oracle/admin/CDB1/dpdump first
 
 DB_USERNAME="system"
 DB_PASSWORD="hanoi123"
 DB_HOST="localhost"
 DB_PORT="1521"
-DB_SID="CDB1"  # SID or service name of your Oracle database
+DB_SID="CDB1" # SID or service name of your Oracle database
 
 DB_USER="app_crm"
 DB_USER_PASS="Gmo#2024"
@@ -34,15 +35,14 @@ EOF
 # sudo docker cp ./export.dmp oracledb-volume:/opt/oracle/admin/CDB1/dpdump
 impdp app_crm/Gmo#2024@pdb1 directory=DUMPDIRECTORY dumpfile=export.dmp logfile=import.log
 
-
 # rebuild in valid objects
-sqlplus / as sysdba/"${DB_USER_PASSWORD}"@${DB_HOST}:${DB_PORT}/${DB_SID} <<EOF
+sqlplus / as sysdba/${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_SID} <<EOF
 @/opt/oracle/product/19c/dbhome_1/rdbms/admin/utlrp.sql
 exit
 EOF
 
 # enable archivelog (use rman for backup)
-sqlplus / as sysdba/"${DB_USER_PASSWORD}"@${DB_HOST}:${DB_PORT}/${DB_SID} <<EOF
+sqlplus / as sysdba/${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_SID} <<EOF
 SHUTDOWN IMMEDIATE;
 STARTUP MOUNT;
 ALTER DATABASE ARCHIVELOG;
@@ -51,5 +51,7 @@ ARCHIVE LOG LIST;
 exit
 EOF
 
+lsnrctl stop
+lsnrctl start
 
 ### docs RMAN: https://docs.oracle.com/en/database/oracle/oracle-database/19/bradv/getting-started-rman.html#GUID-2DFA0B10-38BD-435F-981D-A665D81243F3
